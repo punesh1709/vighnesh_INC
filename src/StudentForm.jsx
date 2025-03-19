@@ -1,180 +1,141 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
+import "bootstrap/dist/css/bootstrap.min.css";
+import { useNavigate } from "react-router-dom";
 
-function StudentForm({ fetchStudents, selectedStudent, clearSelection }) {
-  const [student, setStudent] = useState({
-    name: "",
-    roll_number: "",
-    class: "",
-    section: "",
-    attendance: "",
-    maths: "",
-    science: "",
-    english: "",
-  });
+const StudentTable = () => {
+  const navigate = useNavigate();
+  const [students, setStudents] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(5);
 
   useEffect(() => {
-    if (selectedStudent) {
-      setStudent({
-        ...selectedStudent,
-        maths: selectedStudent.marks.maths,
-        science: selectedStudent.marks.science,
-        english: selectedStudent.marks.english,
-      });
-    }
-  }, [selectedStudent]);
+    axios
+      .get("http://localhost:8000/students")
+      .then((response) => setStudents(response.data))
+      .catch((error) => console.error("Error fetching student data:", error));
+  }, []);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setStudent((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+  const handleLogout = () => {
+    localStorage.removeItem("isLoggedIn");
+    navigate("/");
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // Filtered students based on search
+  const filteredStudents = students.filter((student) => {
+    const nameMatch = student.name
+      ?.toLowerCase()
+      .includes(searchTerm.trim().toLowerCase());
+    const rollNumberMatch = student.roll_number
+      ?.toString()
+      .includes(searchTerm.trim());
+    return nameMatch || rollNumberMatch;
+  });
 
-    const studentData = {
-      ...student,
-      marks: {
-        maths: parseInt(student.maths),
-        science: parseInt(student.science),
-        english: parseInt(student.english),
-      },
-    };
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredStudents.slice(
+    indexOfFirstItem,
+    indexOfLastItem
+  );
 
-    if (selectedStudent) {
-      // Update Student
-      await axios.put(
-        `http://localhost:8000/students/${selectedStudent.id}`,
-        studentData
-      );
-    } else {
-      // Create Student
-      await axios.post("http://localhost:8000/students", studentData);
-    }
+  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
 
-    fetchStudents();
-    clearSelection();
-    setStudent({
-      name: "",
-      roll_number: "",
-      class: "",
-      section: "",
-      attendance: "",
-      maths: "",
-      science: "",
-      english: "",
-    });
-  };
+  // Pagination buttons logic (show only limited buttons)
+  const maxVisiblePages = 5;
+  const startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+  const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
 
   return (
-    <div className="card p-3">
-      <h3>{selectedStudent ? "Edit Student" : "Add Student"}</h3>
-      <form onSubmit={handleSubmit}>
-        <div className="mb-2">
-          <label>Name:</label>
-          <input
-            type="text"
-            className="form-control"
-            name="name"
-            value={student.name}
-            onChange={handleChange}
-            required
-          />
-        </div>
+    <div className="container mt-5">
+  <div className="d-flex justify-content-between mb-4">
+    <h2 className="mb-4">Student Data</h2>
+    <button className="btn btn-danger" onClick={handleLogout}>
+      Logout
+    </button>
+  </div>
 
-        <div className="mb-2">
-          <label>Roll Number:</label>
-          <input
-            type="text"
-            className="form-control"
-            name="roll_number"
-            value={student.roll_number}
-            onChange={handleChange}
-            required
-          />
-        </div>
+  {/* Search Input */}
+  <input
+    type="text"
+    placeholder="Search by Name or Roll Number"
+    className="form-control mb-3"
+    value={searchTerm}
+    onChange={(e) => setSearchTerm(e.target.value)}
+  />
 
-        <div className="mb-2">
-          <label>Class:</label>
-          <input
-            type="text"
-            className="form-control"
-            name="class"
-            value={student.class}
-            onChange={handleChange}
-            required
-          />
-        </div>
+    <table className="table table-bordered table-striped">
+      <thead className="table-dark">
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Roll Number</th>
+          <th>Class</th>
+          <th>Section</th>
+          <th>Attendance (%)</th>
+          <th>Marks (Maths)</th>
+          <th>Marks (Science)</th>
+          <th>Marks (English)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {currentItems.map((student) => (
+          <tr key={student.id}>
+            <td>{student.id}</td>
+            <td>{student.name}</td>
+            <td>{student.roll_number}</td>
+            <td>{student.class}</td>
+            <td>{student.section}</td>
+            <td>{student.attendance}%</td>
+            <td>{student.marks.maths}</td>
+            <td>{student.marks.science}</td>
+            <td>{student.marks.english}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
 
-        <div className="mb-2">
-          <label>Section:</label>
-          <input
-            type="text"
-            className="form-control"
-            name="section"
-            value={student.section}
-            onChange={handleChange}
-            required
-          />
-        </div>
+      {/* Pagination Controls */}
+      <div className="d-flex justify-content-center">
+        {startPage > 1 && (
+            <button
+            className="btn btn-primary mx-1"
+            onClick={() => setCurrentPage(1)}
+          >
+            1
+            </button>
+        )}
 
-        <div className="mb-2">
-          <label>Attendance:</label>
-          <input
-            type="number"
-            className="form-control"
-            name="attendance"
-            value={student.attendance}
-            onChange={handleChange}
-            required
-          />
-        </div>
+        {startPage > 2 && <span className="mx-1">...</span>}
 
-        <div className="mb-2">
-          <label>Maths:</label>
-          <input
-            type="number"
-            className="form-control"
-            name="maths"
-            value={student.maths}
-            onChange={handleChange}
-            required
-          />
-        </div>
+        {Array.from({ length: endPage - startPage + 1 }, (_, index) => (
+            <button
+            key={startPage + index}
+            className={`btn btn-primary mx-1 ${
+              currentPage === startPage + index ? "active" : ""
+            }`}
+            onClick={() => setCurrentPage(startPage + index)}
+            >
+            {startPage + index}
+            </button>
+        ))}
 
-        <div className="mb-2">
-          <label>Science:</label>
-          <input
-            type="number"
-            className="form-control"
-            name="science"
-            value={student.science}
-            onChange={handleChange}
-            required
-          />
-        </div>
+        {endPage < totalPages - 1 && <span className="mx-1">...</span>}
 
-        <div className="mb-2">
-          <label>English:</label>
-          <input
-            type="number"
-            className="form-control"
-            name="english"
-            value={student.english}
-            onChange={handleChange}
-            required
-          />
-        </div>
-
-        <button type="submit" className="btn btn-primary">
-          {selectedStudent ? "Update Student" : "Add Student"}
-        </button>
-      </form>
-    </div>
+        {endPage < totalPages && (
+          <button
+            className="btn btn-primary mx-1"
+            onClick={() => setCurrentPage(totalPages)}
+          >
+            {totalPages}
+          </button>
+        )}
+      </div>
+      
+</div>
   );
-}
+};
 
-export default StudentForm;
+export default StudentTable;

@@ -318,6 +318,42 @@ const sectionOptions = ["A", "B", "C", "D", "E"];
       </div>
     </div>
   )}
+
+<div className="d-flex justify-content-center">
+        {startPage > 1 && (
+            <button
+            className="btn btn-primary mx-1"
+            onClick={() => setCurrentPage(1)}
+          >
+            1
+            </button>
+        )}
+
+        {startPage > 2 && <span className="mx-1">...</span>}
+
+        {Array.from({ length: endPage - startPage + 1 }, (_, index) => (
+            <button
+            key={startPage + index}
+            className={`btn btn-primary mx-1 ${
+              currentPage === startPage + index ? "active" : ""
+            }`}
+            onClick={() => setCurrentPage(startPage + index)}
+            >
+            {startPage + index}
+            </button>
+        ))}
+
+        {endPage < totalPages - 1 && <span className="mx-1">...</span>}
+
+        {endPage < totalPages && (
+          <button
+            className="btn btn-primary mx-1"
+            onClick={() => setCurrentPage(totalPages)}
+          >
+            {totalPages}
+          </button>
+        )}
+      </div>
 </div>
 
   );
